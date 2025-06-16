@@ -1,36 +1,88 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🧭 MissionCenter Client
 
-## Getting Started
+**MissionCenter Client** is a real-time dashboard and device interface built with **Next.js 15**, enabling dynamic mission control and device-level communication using **Socket.IO**.
 
-First, run the development server:
+The system provides two distinct views tailored for different roles:
+
+- **Control Panel** – for operators to send commands and monitor device statuses across multiple missions.
+- **Device Screen** – for individual mission devices to receive commands and participate in real-time updates.
+
+---
+
+## ⚙️ Tech Stack
+
+- **Framework**: [Next.js 15 (App Router)]
+- **Language**: TypeScript
+- **UI Library**: [shadcn/ui]
+- **Realtime Layer**: [Socket.IO Client]
+- **Styling**: Tailwind CSS
+
+---
+
+## 📦 Features
+
+### 🎛 Control Panel
+
+- Connect to multiple mission rooms
+- View devices connected to each mission in real-time
+- Send:
+    - Mission-wide commands (`SEND_MISSION_COMMAND`)
+    - Direct device-level commands (`DEVICE_COMMAND`)
+- View detailed command delivery logs and device status updates per mission
+
+### 📲 Device Interface
+
+- Connect as a specific device using a `deviceId` from the URL
+- Dynamically select and join one or more missions
+- Receive and log:
+    - Commands sent directly to the device
+    - Broadcasted mission-level commands
+- Display live mission connection status and logs
+
+---
+
+## 🧩 Application Structure
+
+- `app/` – Routes for Home, Control Panel, and dynamic Device pages
+- `components/` – Shared UI building blocks
+- `hooks/` – Custom `useSocket` hook for Socket.IO integration
+- `types/` – Shared TypeScript definitions for socket payloads and events
+- `lib/` – Utility functions and helpers
+
+---
+
+## 🚦 Usage
+
+### Local Development
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Environment Setup
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Configure the Socket.IO server endpoint and connection options inside the `useSocket` hook or via `.env.local`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## 📁 Pages
 
-To learn more about Next.js, take a look at the following resources:
+- `/` – Home screen with navigation
+- `/control-panel` – Mission controller interface
+- `/device/[deviceId]` – Device UI view using path param
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🧠 Future Improvements
 
-## Deploy on Vercel
+- Authentication for device and controller roles
+- Device connection retry & resilience strategies
+- Command history persistence (e.g., localStorage or backend DB)
+- Visual mission activity graphs
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 📍 Project Goals
+
+MissionCenter Client aims to serve as a minimal but powerful interface for interacting with mission-critical devices using real-time WebSocket communication. Its goal is to be easily extendable for remote operations, testing labs, simulations, and educational use cases where device/command interactions need to be simulated or visualized clearly.
