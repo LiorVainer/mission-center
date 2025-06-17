@@ -56,8 +56,8 @@ The system provides two distinct views tailored for different roles:
 ### Local Development
 
 ```bash
-pnpm install
-pnpm dev
+npm install
+npm run dev
 ```
 
 ### Environment Setup
