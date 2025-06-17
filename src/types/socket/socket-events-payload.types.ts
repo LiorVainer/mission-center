@@ -42,3 +42,12 @@ export const DeviceJoinedMissionPayloadSchema = z.object({
 export type DeviceJoinedMissionPayload = z.infer<
   typeof DeviceJoinedMissionPayloadSchema
 >;
+
+export const DeviceLeftMissionPayloadSchema = z.object({
+  missionId: z.string().min(1),
+  deviceId: z.string().min(1),
+});
+
+export type DeviceLeftMissionPayload = z.infer<
+  typeof DeviceLeftMissionPayloadSchema
+>;

@@ -1,6 +1,7 @@
 import {
   DeviceCommandPayload,
   DeviceJoinedMissionPayload,
+  DeviceLeftMissionPayload,
   DeviceStatusUpdatePayload,
   JoinMissionRoomsPayload,
   SendMissionCommandPayload,
@@ -32,9 +33,15 @@ export interface MissionSocketCTSEventMap {
     SendMissionCommandAckPayload
   >;
 }
+
 export interface MissionSocketSTCEventMap extends MissionSocketCTSEventMap {
   [MissionSocketEvents.DEVICE_JOINED_MISSION]: SocketEventHandler<
     DeviceJoinedMissionPayload,
+    void
+  >;
+
+  [MissionSocketEvents.DEVICE_LEFT_MISSION]: SocketEventHandler<
+    DeviceLeftMissionPayload,
     void
   >;
 }

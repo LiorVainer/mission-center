@@ -32,7 +32,7 @@ export function useSocket({
     return () => {
       socketInstance.disconnect();
     };
-  }, [namespace, query, serverUrl]);
+  }, []);
 
   return socket;
 }

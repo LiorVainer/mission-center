@@ -4,7 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useEffect, useState } from "react";
 import { useSocket } from "@/hooks/use-socket.hooks";
 import {
+  DEVICE_STATUS_OPTIONS,
   DeviceCommandPayload,
+  DeviceStatus,
+  DeviceStatusUpdatePayload,
+  DeviceStatusUpdateSchema,
   MissionSocketEvents,
   SendMissionCommandPayload,
 } from "@/types/socket";
@@ -13,6 +17,8 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useParams } from "next/navigation";
 import { MultiSelect } from "@/components/ui/multi-select";
+import { Select, SelectContent, SelectItem, SelectTrigger } from "./ui/select";
+import { Button } from "./ui/button";
 
 const ALL_MISSIONS = ["mission-a", "mission-b", "mission-c"];
 
@@ -37,6 +43,10 @@ export const Device = () => {
   const [selectedMissions, setSelectedMissions] = useState<string[]>([]);
   const [joinedMissions, setJoinedMissions] = useState<string[]>([]);
   const [commandLog, setCommandLog] = useState<CommandEntry[]>([]);
+  const [selectedStatus, setSelectedStatus] = useState<DeviceStatus | "">("");
+  const [selectedMissionForStatus, setSelectedMissionForStatus] =
+    useState<string>("");
+  const [statusAck, setStatusAck] = useState(false);
 
   useEffect(() => {
     if (!socket) return;
@@ -104,6 +114,28 @@ export const Device = () => {
         ]);
       },
     );
+
+    socket.on(MissionSocketEvents.DEVICE_LEFT_MISSION, (payload) => {
+      setCommandLog((prev) => [
+        ...prev,
+        {
+          from: "server",
+          type: "device",
+          missionId: payload.missionId, // Device can see which mission it disconnected from
+          command: `Device ${payload.deviceId} disconnected from mission.`,
+          timestamp: Date.now(),
+        },
+      ]);
+      setJoinedMissions((prev) => prev.filter((m) => m !== payload.missionId));
+    });
+
+    return () => {
+      socket.off("connect");
+      socket.off("disconnect");
+      socket.off(MissionSocketEvents.DEVICE_COMMAND);
+      socket.off(MissionSocketEvents.SEND_MISSION_COMMAND);
+      socket.off(MissionSocketEvents.DEVICE_LEFT_MISSION);
+    };
   }, [socket]);
 
   return (
@@ -178,6 +210,93 @@ export const Device = () => {
             </ul>
           )}
         </ScrollArea>
+        <div className="mt-6 space-y-2">
+          <h4 className="font-medium">Send Device Status Update:</h4>
+
+          <div className="flex flex-col sm:flex-row gap-4 items-center">
+            {/* Mission Selector */}
+            <div className="w-full sm:w-1/3">
+              <Select
+                value={selectedMissionForStatus}
+                onValueChange={setSelectedMissionForStatus}
+              >
+                <SelectTrigger className={"w-full"}>
+                  {selectedMissionForStatus || "Select Mission"}
+                </SelectTrigger>
+                <SelectContent>
+                  {joinedMissions.map((id) => (
+                    <SelectItem key={id} value={id}>
+                      {id}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Status Selector */}
+            <div className="w-full sm:w-1/3">
+              <Select
+                value={selectedStatus}
+                onValueChange={(val) => setSelectedStatus(val as DeviceStatus)}
+              >
+                <SelectTrigger className={"w-full"}>
+                  {selectedStatus ? selectedStatus : "Select Status"}
+                </SelectTrigger>
+                <SelectContent>
+                  {(
+                    Object.entries(DEVICE_STATUS_OPTIONS) as [
+                      DeviceStatus,
+                      string,
+                    ][]
+                  ).map(([key, label]) => (
+                    <SelectItem key={key} value={key}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Send Button */}
+            <Button
+              disabled={!selectedStatus || !selectedMissionForStatus}
+              className="flex-1"
+              onClick={() => {
+                if (!socket) return;
+
+                const payload: DeviceStatusUpdatePayload = {
+                  missionId: selectedMissionForStatus,
+                  deviceId,
+                  status: selectedStatus,
+                  timestamp: Date.now(),
+                };
+
+                const parsed = DeviceStatusUpdateSchema.safeParse(payload);
+                if (!parsed.success) {
+                  console.warn("Invalid status payload", parsed.error);
+                  return;
+                }
+
+                socket.emit(
+                  MissionSocketEvents.DEVICE_STATUS_UPDATE,
+                  payload,
+                  (ack) => {
+                    setStatusAck(ack.status === "success");
+                    setTimeout(() => setStatusAck(false), 3000);
+                  },
+                );
+              }}
+            >
+              Send
+            </Button>
+          </div>
+
+          {statusAck && (
+            <p className="text-green-600 text-sm">
+              ✅ Status update received by server
+            </p>
+          )}
+        </div>
       </CardContent>
     </Card>
   );

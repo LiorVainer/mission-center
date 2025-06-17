@@ -35,6 +35,9 @@ export const ControlPanel = () => {
     Record<string, string[]>
   >({});
   const [connected, setConnected] = useState(false);
+  const [deviceStatuses, setDeviceStatuses] = useState<
+    Record<string, { status: string; timestamp: number }>
+  >({});
 
   const socket = useSocket({
     query: { role: "controller" },
@@ -68,6 +71,11 @@ export const ControlPanel = () => {
         ...prev,
         [key]: [...(prev[key] || []), entry],
       }));
+      const deviceKey = `${data.missionId}:${data.deviceId}`;
+      setDeviceStatuses((prev) => ({
+        ...prev,
+        [deviceKey]: { status: data.status, timestamp: data.timestamp },
+      }));
     });
 
     socket.on(
@@ -78,7 +86,6 @@ export const ControlPanel = () => {
           [missionId]: [...(prev[missionId] || []), deviceId],
         }));
 
-        // Optional log message
         const keyAll = missionId; // For broadcast container
         setLogs((prev) => ({
           ...prev,
@@ -90,8 +97,40 @@ export const ControlPanel = () => {
       },
     );
 
+    socket.on(MissionSocketEvents.DEVICE_LEFT_MISSION, (data) => {
+      const { missionId, deviceId } = data;
+      setDevicesByMission((prev) => ({
+        ...prev,
+        [missionId]: (prev[missionId] || []).filter((id) => id !== deviceId),
+      }));
+
+      // Also remove device status, as it's no longer connected
+      setDeviceStatuses((prev) => {
+        const newStatuses = { ...prev };
+        delete newStatuses[`${missionId}:${deviceId}`];
+        return newStatuses;
+      });
+
+      // Add a log entry for the disconnection
+      const keyAll = missionId;
+      setLogs((prev) => ({
+        ...prev,
+        [keyAll]: [
+          ...(prev[keyAll] || []),
+          `❌ Device "${deviceId}" disconnected from mission`,
+        ],
+      }));
+
+      // If the disconnected device was currently selected, reset selection
+      if (activeMission === missionId && selectedDevice === deviceId) {
+        setSelectedDevice("ALL");
+      }
+    });
+
     return () => {
       socket.off(MissionSocketEvents.DEVICE_STATUS_UPDATE);
+      socket.off(MissionSocketEvents.DEVICE_JOINED_MISSION);
+      socket.off(MissionSocketEvents.DEVICE_LEFT_MISSION); // Clean up new event listener
     };
   }, [socket]);
 
@@ -212,9 +251,23 @@ export const ControlPanel = () => {
                       const key = `${mission}:${id}`;
                       return (
                         <div key={id}>
-                          <h4 className="text-sm font-medium text-muted-foreground mb-1">
-                            {id}
-                          </h4>
+                          <div className="mb-1 flex justify-between items-center">
+                            <h4 className="text-sm font-medium text-muted-foreground">
+                              {id}
+                            </h4>
+                            {deviceStatuses[`${mission}:${id}`] ? (
+                              <span className="text-xs text-blue-600">
+                                {deviceStatuses[`${mission}:${id}`].status} @{" "}
+                                {new Date(
+                                  deviceStatuses[`${mission}:${id}`].timestamp,
+                                ).toLocaleTimeString()}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-muted-foreground italic">
+                                No status
+                              </span>
+                            )}
+                          </div>
                           <ScrollArea className="h-32 rounded-md border bg-muted p-2">
                             {(logs[key]?.length ?? 0) === 0 ? (
                               <p className="text-xs italic text-muted-foreground">
@@ -226,7 +279,8 @@ export const ControlPanel = () => {
                                   <li
                                     key={i}
                                     className={`text-xs ${
-                                      entry.includes("Error")
+                                      entry.includes("Error") ||
+                                      entry.includes("disconnected") // Highlight disconnects in red
                                         ? "text-red-500"
                                         : "text-gray-800"
                                     }`}
